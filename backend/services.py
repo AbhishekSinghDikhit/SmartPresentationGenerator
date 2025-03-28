@@ -1,5 +1,6 @@
 from pptx import Presentation
 from pptx.util import Inches, Pt
+from pptx.dml.color import RGBColor
 import os
 from typing import List, Dict
 
@@ -11,7 +12,7 @@ class PresentationRequest:
 
 def generate_pptx(request: PresentationRequest, ppt_content: List[Dict[str, List[str]]]) -> str:
     """
-    Generate a PowerPoint presentation based on request and content data.
+    Generate a PowerPoint presentation with custom design and color.
     
     Args:
         request: PresentationRequest object with title, author, and number of slides
@@ -29,26 +30,40 @@ def generate_pptx(request: PresentationRequest, ppt_content: List[Dict[str, List
             raise ValueError("Presentation content cannot be empty")
 
         prs = Presentation()
-        
+
+        # Custom Colors
+        title_bg_color = RGBColor(0, 51, 102)  # Dark Blue
+        content_bg_color = RGBColor(220, 230, 241)  # Light Blue
+        text_color = RGBColor(255, 255, 255)  # White
+        bullet_color = RGBColor(0, 0, 0)  # Black
+
         # Title Slide
-        title_slide_layout = prs.slide_layouts[0]  # Title slide layout
+        title_slide_layout = prs.slide_layouts[5]  # Title Only layout
         slide = prs.slides.add_slide(title_slide_layout)
-        title = slide.shapes.title
-        subtitle = slide.placeholders[1] if len(slide.placeholders) > 1 else None
+        title_shape = slide.shapes.title
 
-        title.text = request.title.strip()
-        title.text_frame.text = request.title.strip()
-        title.text_frame.paragraphs[0].font.size = Pt(44)  # Increase font size
+        # Set background color
+        slide_background = slide.background
+        fill = slide_background.fill
+        fill.solid()
+        fill.fore_color.rgb = title_bg_color
 
-        if subtitle:
-            subtitle.text = f"By {request.author.strip()}"
-            subtitle.text_frame.paragraphs[0].font.size = Pt(28)
+        # Title formatting
+        title_shape.text = request.title.strip()
+        title_frame = title_shape.text_frame
+        title_frame.paragraphs[0].font.size = Pt(44)
+        title_frame.paragraphs[0].font.bold = True
+        title_frame.paragraphs[0].font.color.rgb = text_color
+
+        # Add author as subtitle
+        author_shape = slide.shapes.add_textbox(Inches(3), Inches(3), Inches(5), Inches(1))
+        author_frame = author_shape.text_frame
+        author_frame.text = f"By {request.author.strip()}"
+        author_frame.paragraphs[0].font.size = Pt(28)
+        author_frame.paragraphs[0].font.color.rgb = text_color
 
         # Content Slides
         available_slides = min(len(ppt_content), request.num_slides)
-        if available_slides < request.num_slides:
-            print(f"Warning: Requested {request.num_slides} slides but only {available_slides} available")
-
         for slide_data in ppt_content[:available_slides]:
             if not isinstance(slide_data, dict) or "title" not in slide_data or "content" not in slide_data:
                 print("Warning: Skipping invalid slide data")
@@ -59,26 +74,48 @@ def generate_pptx(request: PresentationRequest, ppt_content: List[Dict[str, List
             slide_title = slide.shapes.title
             content_box = slide.placeholders[1] if len(slide.placeholders) > 1 else None
 
-            slide_title.text = str(slide_data["title"]).strip()
-            slide_title.text_frame.paragraphs[0].font.size = Pt(36)  # Bigger font for title
+            # Set background color
+            slide_background = slide.background
+            fill = slide_background.fill
+            fill.solid()
+            fill.fore_color.rgb = content_bg_color
 
+            # Title Formatting
+            slide_title.text = slide_data["title"].strip()
+            slide_title.text_frame.paragraphs[0].font.size = Pt(36)
+            slide_title.text_frame.paragraphs[0].font.bold = True
+            slide_title.text_frame.paragraphs[0].font.color.rgb = RGBColor(0, 51, 102)  # Dark Blue
+
+            # Content Formatting
             if content_box and slide_data["content"]:
                 text_frame = content_box.text_frame
-                text_frame.clear()  # Clear any default text
+                text_frame.clear()  # Clear default text
 
                 for bullet in slide_data["content"]:
-                    bullet = str(bullet).strip()
+                    bullet = bullet.strip()
                     if bullet:
                         p = text_frame.add_paragraph()
                         p.text = bullet
-                        p.font.size = Pt(24)  # Increase bullet point font size
+                        p.font.size = Pt(24)
+                        p.font.color.rgb = bullet_color  # Set bullet point color
                         p.level = 0  # Bullet point level
 
         # Add "Thank You" Slide
         thank_you_slide = prs.slides.add_slide(prs.slide_layouts[5])  # Title Only Layout
         thank_you_title = thank_you_slide.shapes.title
         thank_you_title.text = "Thank You!"
-        thank_you_title.text_frame.paragraphs[0].font.size = Pt(44)  # Make it large
+        
+        # Set background color
+        slide_background = thank_you_slide.background
+        fill = slide_background.fill
+        fill.solid()
+        fill.fore_color.rgb = title_bg_color
+
+        # Format Thank You text
+        thank_you_title.text_frame.paragraphs[0].font.size = Pt(44)
+        thank_you_title.text_frame.paragraphs[0].font.bold = True
+        thank_you_title.text_frame.paragraphs[0].font.color.rgb = text_color
+        thank_you_title.text_frame.paragraphs[0].alignment = 1  # Center alignment
 
         # Save the presentation
         file_name = f"{request.title.strip().replace(' ', '_')}.pptx"
