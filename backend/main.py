@@ -164,5 +164,5 @@ async def generate_presentation(request: PresentationRequest):
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", 8080))  # Default to 10000 if PORT is not set
-    uvicorn.run(app, host="0.0.0.0", port=port, reload=True)
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port, log_level="debug", reload=True)
