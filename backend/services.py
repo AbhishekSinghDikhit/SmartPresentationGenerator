@@ -14,9 +14,9 @@ IMAGE_DIR = "slide_images"
 os.makedirs(IMAGE_DIR, exist_ok=True)
 
 # Load Stable Diffusion model using diffusers
-device = "cuda" if torch.cuda.is_available() else "cpu"
-pipe = StableDiffusionPipeline.from_pretrained("stabilityai/stable-diffusion-xl-base-1.0")
-pipe.to(device)
+# device = "cuda" if torch.cuda.is_available() else "cpu"
+# pipe = StableDiffusionPipeline.from_pretrained("stabilityai/stable-diffusion-xl-base-1.0")
+# pipe.to(device)
 
 class PresentationRequest:
     def __init__(self, title: str, author: str, num_slides: int):
