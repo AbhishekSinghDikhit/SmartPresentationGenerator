@@ -22,7 +22,7 @@ const PresentationForm = () => {
     };
 
     try {
-      const response = await axios.post("http://localhost:8080/api/generate_presentation", requestData, {
+      const response = await axios.post("https://smartpresentationgenerator-production.up.railway.app/api/generate_presentation", requestData, {
         responseType: "blob", // Important: Receive file as a Blob
       });
 
