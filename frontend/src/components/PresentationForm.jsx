@@ -6,7 +6,7 @@ const PresentationForm = () => {
   const [author, setAuthor] = useState("");
   const [numSlides, setNumSlides] = useState(5);
   const [description, setDescription] = useState("");
-  const [useAI, setUseAI] = useState(true); // Default to AI
+  const [useAI, setUseAI] = useState(true);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
@@ -16,25 +16,25 @@ const PresentationForm = () => {
     const requestData = {
       title: title.trim(),
       author: author.trim(),
-      num_slides: Number(numSlides), // Ensure it's an integer
-      description: useAI ? "" : description.trim(), // Empty string if AI is used
-      useAI: useAI, // Boolean flag for AI
+      num_slides: Number(numSlides),
+      description: useAI ? "" : description.trim(),
+      useAI: useAI,
     };
 
     try {
-      const response = await axios.post("https://smartpresentationgenerator-production.up.railway.app/api/generate_presentation", requestData, {
-        responseType: "blob", // Important: Receive file as a Blob
-      });
+      const response = await axios.post(
+        "https://smartpresentationgenerator-production.up.railway.app/api/generate_presentation",
+        requestData,
+        { responseType: "blob" }
+      );
 
-      // Create a URL for the downloaded file
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute("download", "presentation.pptx"); // Set download filename
+      link.setAttribute("download", "presentation.pptx");
       document.body.appendChild(link);
-      link.click(); // Trigger download
-      link.remove(); // Clean up
-
+      link.click();
+      link.remove();
     } catch (error) {
       console.error("Error generating presentation:", error);
     } finally {
@@ -43,73 +43,85 @@ const PresentationForm = () => {
   };
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-md">
-      <h2 className="text-xl font-semibold mb-4">Create Presentation</h2>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <input
-          type="text"
-          placeholder="Presentation Title"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          className="w-full p-2 border rounded"
-          required
-        />
-        <input
-          type="text"
-          placeholder="Author Name"
-          value={author}
-          onChange={(e) => setAuthor(e.target.value)}
-          className="w-full p-2 border rounded"
-          required
-        />
-        <input
-          type="number"
-          placeholder="Number of Slides"
-          value={numSlides}
-          onChange={(e) => setNumSlides(e.target.value)}
-          className="w-full p-2 border rounded"
-          min="1"
-          required
-        />
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-r from-blue-50 to-blue-100 p-4">
+      <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
+        <h2 className="text-2xl font-bold text-gray-700 mb-6 text-center">Create Presentation</h2>
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <input
+            type="text"
+            placeholder="Presentation Title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+            required
+          />
+          <input
+            type="text"
+            placeholder="Author Name"
+            value={author}
+            onChange={(e) => setAuthor(e.target.value)}
+            className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+            required
+          />
+          <input
+            type="number"
+            placeholder="Number of Slides"
+            value={numSlides}
+            onChange={(e) => setNumSlides(e.target.value)}
+            className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+            min="1"
+            required
+          />
 
-        {/* Radio buttons for AI or Manual input */}
-        <div className="flex space-x-4">
-          <label className="flex items-center space-x-2">
-            <input
-              type="radio"
-              checked={useAI}
-              onChange={() => setUseAI(true)}
-              className="w-4 h-4"
-            />
-            <span>Use AI to generate content</span>
-          </label>
-          <label className="flex items-center space-x-2">
-            <input
-              type="radio"
-              checked={!useAI}
-              onChange={() => setUseAI(false)}
-              className="w-4 h-4"
-            />
-            <span>Enter content manually</span>
-          </label>
-        </div>
+          {/* Radio buttons */}
+          <div className="flex justify-between items-center bg-gray-100 p-3 rounded-lg">
+            <label className="flex items-center space-x-2">
+              <input
+                type="radio"
+                checked={useAI}
+                onChange={() => setUseAI(true)}
+                className="w-5 h-5 text-blue-600"
+              />
+              <span className="text-gray-700">Use AI</span>
+            </label>
+            <label className="flex items-center space-x-2">
+              <input
+                type="radio"
+                checked={!useAI}
+                onChange={() => setUseAI(false)}
+                className="w-5 h-5 text-blue-600"
+              />
+              <span className="text-gray-700">Enter Content Manually</span>
+            </label>
+          </div>
 
-        {/* Show textarea only if manual input is selected */}
-        {!useAI && (
-          <textarea
-            placeholder="Enter your presentation description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            className="w-full p-2 border rounded"
-            rows="4"
-            required={!useAI}
-          ></textarea>
-        )}
+          {!useAI && (
+            <textarea
+              placeholder="Enter your presentation description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+              rows="4"
+              required
+            ></textarea>
+          )}
 
-        <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
-          {loading ? "Generating..." : "Generate & Download"}
-        </button>
-      </form>
+          <button
+            type="submit"
+            className="w-full flex justify-center items-center bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 transition-all"
+          >
+            {loading ? (
+              <>
+                <svg className="animate-spin h-5 w-5 mr-2 border-t-2 border-white rounded-full" viewBox="0 0 24 24"></svg>
+                Generating...
+              </>
+            ) : (
+              "Generate & Download"
+            )}
+          </button>
+        </form>
+      </div>
     </div>
   );
 };

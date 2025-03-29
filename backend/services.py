@@ -16,8 +16,8 @@ class PresentationRequest:
         self.author = author
         self.num_slides = num_slides
 
-HF_API_KEY = os.getenv("HF_KEY") 
-HF_MODEL_URL = "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0"
+# Load Stability AI API Key
+STABILITY_API_KEY = os.getenv("STABILITY_AI_KEY")
 
 # Ensure a valid directory exists for images
 IMAGE_DIR = "slide_images"
@@ -29,7 +29,7 @@ def sanitize_filename(filename: str) -> str:
 
 def generate_slide_image(prompt: str) -> str:
     """
-    Generates an image using Stable Diffusion and saves it locally.
+    Generates an image using Stability AI and saves it locally.
 
     Args:
         prompt (str): Description of the slide content.
@@ -37,19 +37,30 @@ def generate_slide_image(prompt: str) -> str:
     Returns:
         str: Path to the saved image, or None if the request fails.
     """
-    headers = {"Authorization": f"Bearer {HF_API_KEY}"}
-    response = requests.post(HF_MODEL_URL, headers=headers, json={"inputs": prompt})
+    STABILITY_API_URL = "https://api.stability.ai/v2beta/stable-image/generate/core"
 
-    if response.status_code == 200 and response.content:
+    headers = {
+        "Authorization": f"Bearer {STABILITY_API_KEY}",
+        "Accept": "image/*",
+    }
+    payload = {
+        "model": "stable-diffusion-xl-1024-v1-0",  # Stable Diffusion XL model
+        "prompt": prompt,
+        "output_format": "webp",
+    }
+
+    response = requests.post(STABILITY_API_URL, headers=headers, files={"none": ''}, data=payload)
+
+    if response.status_code == 200:
         sanitized_prompt = sanitize_filename(prompt)
-        image_path = os.path.join(IMAGE_DIR, f"{sanitized_prompt}.png")
+        image_path = os.path.join(IMAGE_DIR, f"{sanitized_prompt}.webp")
 
         with open(image_path, "wb") as f:
             f.write(response.content)
 
         return image_path
     else:
-        print(f"Error generating image: {response.text}")
+        print(f"❌ Error generating image: {response.status_code} - {response.text}")
         return None
 
 def generate_pptx(request, ppt_content: List[Dict[str, List[str]]]) -> str:
@@ -157,4 +168,4 @@ def generate_pptx(request, ppt_content: List[Dict[str, List[str]]]) -> str:
     except PermissionError:
         raise OSError(f"Permission denied when saving file to {file_path}")
     except Exception as e:
-        raise Exception(f"Failed to generate presentation: {str(e)}")
+        raise Exception(f"Failed to generate presentation: {str(e)}") 
