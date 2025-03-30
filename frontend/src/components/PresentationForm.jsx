@@ -1,5 +1,6 @@
 import { useState } from "react";
 import axios from "axios";
+import SlidePreview from "./SlidePreview"; // Import the new component
 
 const PresentationForm = () => {
   const [title, setTitle] = useState("");
@@ -7,11 +8,16 @@ const PresentationForm = () => {
   const [numSlides, setNumSlides] = useState(5);
   const [description, setDescription] = useState("");
   const [useAI, setUseAI] = useState(true);
+  const [imageStyle, setImageStyle] = useState("realistic"); // Default style
   const [loading, setLoading] = useState(false);
+  const [previewImages, setPreviewImages] = useState([]);
+  const [pptBlob, setPptBlob] = useState(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setPreviewImages([]);
+    setPptBlob(null);
 
     const requestData = {
       title: title.trim(),
@@ -19,23 +25,27 @@ const PresentationForm = () => {
       num_slides: Number(numSlides),
       description: useAI ? "" : description.trim(),
       useAI: useAI,
+      image_style: imageStyle, // Include image style in the request
     };
 
     try {
       const response = await axios.post(
-        // "https://smartpresentationgenerator-production.up.railway.app/api/generate_presentation",
         "http://127.0.0.1:8080/api/generate_presentation",
         requestData,
         { responseType: "blob" }
       );
 
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", "presentation.pptx");
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
+      // Convert the response blob into a URL
+      const blobUrl = window.URL.createObjectURL(new Blob([response.data]));
+      setPptBlob(blobUrl);
+
+      // Fetch slide previews (Assuming API provides slide preview URLs)
+      const previewResponse = await axios.post(
+        "http://127.0.0.1:8080/api/preview_slides",
+        requestData
+      );
+      setPreviewImages(previewResponse.data.slide_previews);
+
     } catch (error) {
       console.error("Error generating presentation:", error);
     } finally {
@@ -44,7 +54,7 @@ const PresentationForm = () => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-r from-blue-50 to-blue-100 p-4">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-r from-blue-50 to-blue-100 p-4">
       <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
         <h2 className="text-2xl font-bold text-gray-700 mb-6 text-center">Create Presentation</h2>
         
@@ -108,6 +118,20 @@ const PresentationForm = () => {
             ></textarea>
           )}
 
+          {/* Dropdown for Image Style Selection */}
+          <div className="flex flex-col">
+            <label className="text-gray-700 mb-1 font-semibold">Select Image Style:</label>
+            <select
+              value={imageStyle}
+              onChange={(e) => setImageStyle(e.target.value)}
+              className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+            >
+              <option value="realistic">Realistic</option>
+              <option value="anime">Anime</option>
+              <option value="ghibli">Ghibli Studio</option>
+            </select>
+          </div>
+
           <button
             type="submit"
             className="w-full flex justify-center items-center bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 transition-all"
@@ -118,11 +142,27 @@ const PresentationForm = () => {
                 Generating...
               </>
             ) : (
-              "Generate & Download"
+              "Generate Presentation"
             )}
           </button>
         </form>
       </div>
+
+      {/* Slide Preview Section */}
+      <SlidePreview previewImages={previewImages} />
+
+      {/* Download Button */}
+      {pptBlob && (
+        <div className="mt-6">
+          <a
+            href={pptBlob}
+            download="presentation.pptx"
+            className="bg-green-800 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-all"
+          >
+            Download Presentation
+          </a>
+        </div>
+      )}
     </div>
   );
 };

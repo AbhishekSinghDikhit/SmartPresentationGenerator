@@ -22,9 +22,8 @@ app = FastAPI(title="Presentation Generator API")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    # allow_origins=["http://localhost:5175", "https://smart-presentation-generator.vercel.app"],
     allow_credentials=True,
-    allow_methods=["POST"],  # Restrict to needed methods
+    allow_methods=["POST"],  
     allow_headers=["Content-Type"],
 )
 
@@ -41,19 +40,10 @@ class PresentationRequest(BaseModel):
     author: str
     num_slides: int
     description: Optional[str] = None
+    image_style: Optional[str] = "realistic"  # New parameter with a default style
 
+# Function to generate structured PowerPoint content
 def get_ppt_content(title: str, num_slides: int, description: Optional[str] = None) -> list:
-    """
-    Generate structured PowerPoint content using Gemini API or description.
-    
-    Args:
-        title: Presentation title
-        num_slides: Number of slides requested
-        description: Optional description to generate content from
-    
-    Returns:
-        List of dicts containing slide data
-    """
     structured_slides = []
 
     try:
@@ -145,8 +135,8 @@ async def generate_presentation(request: PresentationRequest):
         if not ppt_content or all(slide.get("title") == "Error" for slide in ppt_content):
             raise HTTPException(status_code=500, detail="Failed to generate presentation content")
 
-        # Generate PPTX
-        pptx_path = generate_pptx(request, ppt_content)
+        # Generate PPTX with selected image style
+        pptx_path = generate_pptx(request, ppt_content, request.image_style)  # Updated to pass `image_style`
         
         if not os.path.exists(pptx_path):
             raise HTTPException(status_code=500, detail="Failed to create presentation file")
@@ -162,6 +152,33 @@ async def generate_presentation(request: PresentationRequest):
         raise e
     except Exception as e:
         logger.error(f"Error in generate_presentation: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+@app.post("/api/preview_slides", response_model=dict)
+async def preview_slides(request: PresentationRequest):
+    """
+    Generate a slide preview before creating the PowerPoint file.
+    """
+    try:
+        # Validate request
+        if request.num_slides <= 0:
+            raise HTTPException(status_code=400, detail="Number of slides must be positive")
+        if not request.title.strip() or not request.author.strip():
+            raise HTTPException(status_code=400, detail="Title and author cannot be empty")
+
+        # Generate slide content preview
+        ppt_content = get_ppt_content(request.title, request.num_slides, request.description)
+
+        if not ppt_content or all(slide.get("title") == "Error" for slide in ppt_content):
+            raise HTTPException(status_code=500, detail="Failed to generate slide preview")
+
+        # Return slide preview as JSON
+        return {"slides": ppt_content, "image_style": request.image_style}  # Include image style in preview
+
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        logger.error(f"Error in preview_slides: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 if __name__ == "__main__":
