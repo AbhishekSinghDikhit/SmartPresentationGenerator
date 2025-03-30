@@ -6,18 +6,14 @@ import os
 from typing import List, Dict
 from dotenv import load_dotenv
 import requests
+from PIL import Image
 import re
+from time import sleep
 
 load_dotenv()
 
-class PresentationRequest:
-    def __init__(self, title: str, author: str, num_slides: int):
-        self.title = title
-        self.author = author
-        self.num_slides = num_slides
-
-# Load Stability AI API Key
-STABILITY_API_KEY = os.getenv("STABILITY_AI_KEY")
+# UNSPLASH_ACCESS_KEY = os.getenv("UNSPLASH_ACCESS_KEY")
+HORDE_API_KEY = os.getenv("STABLE_HORDE_KEY")
 
 # Ensure a valid directory exists for images
 IMAGE_DIR = "slide_images"
@@ -27,9 +23,32 @@ def sanitize_filename(filename: str) -> str:
     """Removes invalid characters from filenames."""
     return re.sub(r'[<>:"/\\|?*]', '_', filename)
 
+# def fetch_image_from_unsplash(query: str) -> str:
+#     """Fetches an image from Unsplash API."""
+#     url = f"https://api.unsplash.com/photos/random?query={query}&client_id={UNSPLASH_ACCESS_KEY}"
+    
+#     try:
+#         response = requests.get(url)
+#         if response.status_code == 200:
+#             image_url = response.json()["urls"]["regular"]
+#             image_path = os.path.join(IMAGE_DIR, f"{sanitize_filename(query)}.jpg")
+
+#             # Download and save image
+#             img_data = requests.get(image_url).content
+#             with open(image_path, "wb") as img_file:
+#                 img_file.write(img_data)
+
+#             return image_path
+#         else:
+#             print(f"❌ Unsplash API Error: {response.status_code} - {response.text}")
+#             return None
+#     except Exception as e:
+#         print(f"❌ Error fetching image from Unsplash: {e}")
+#         return None
+
 def generate_slide_image(prompt: str) -> str:
     """
-    Generates an image using Stability AI and saves it locally.
+    Generates an image using the Stable Horde API and saves it locally as PNG.
 
     Args:
         prompt (str): Description of the slide content.
@@ -37,32 +56,71 @@ def generate_slide_image(prompt: str) -> str:
     Returns:
         str: Path to the saved image, or None if the request fails.
     """
-    STABILITY_API_URL = "https://api.stability.ai/v2beta/stable-image/generate/core"
+    try:
+        url = "https://stablehorde.net/api/v2/generate/async"
 
-    headers = {
-        "Authorization": f"Bearer {STABILITY_API_KEY}",
-        "Accept": "image/*",
-    }
-    payload = {
-        "model": "stable-diffusion-xl-1024-v1-0",  # Stable Diffusion XL model
-        "prompt": prompt,
-        "output_format": "webp",
-    }
+        headers = {
+            "apikey": HORDE_API_KEY,
+            "Client-Agent": "SmartPresentationGenerator"
+        }
 
-    response = requests.post(STABILITY_API_URL, headers=headers, files={"none": ''}, data=payload)
+        payload = {
+            "prompt": prompt,
+            "models": ["stable_diffusion"],
+            "params": {
+                "width": 512,
+                "height": 512
+            }
+        }
 
-    if response.status_code == 200:
-        sanitized_prompt = sanitize_filename(prompt)
-        image_path = os.path.join(IMAGE_DIR, f"{sanitized_prompt}.webp")
+        response = requests.post(url, json=payload, headers=headers)
 
-        with open(image_path, "wb") as f:
-            f.write(response.content)
+        if response.status_code == 202:
+            data = response.json()
+            request_id = data.get("id")
+            print(f"✅ Image request submitted successfully! Request ID: {request_id}")
 
-        return image_path
-    else:
-        print(f"❌ Error generating image: {response.status_code} - {response.text}")
+            # Poll for image completion
+            status_url = f"https://stablehorde.net/api/v2/generate/status/{request_id}"
+            while True:
+                status_response = requests.get(status_url, headers=headers)
+                status_data = status_response.json()
+
+                if "done" in status_data and status_data["done"]:
+                    if "generations" in status_data and len(status_data["generations"]) > 0:
+                        image_url = status_data["generations"][0]["img"]
+                        print(f"✅ Image generated successfully: {image_url}")
+
+                        # Download the image
+                        webp_path = os.path.join(IMAGE_DIR, f"{sanitize_filename(prompt)}.webp")
+                        png_path = os.path.join(IMAGE_DIR, f"{sanitize_filename(prompt)}.png")
+
+                        img_data = requests.get(image_url).content
+                        with open(webp_path, "wb") as img_file:
+                            img_file.write(img_data)
+
+                        # Convert WEBP to PNG
+                        with Image.open(webp_path) as img:
+                            img.convert("RGB").save(png_path, "PNG")
+
+                        print(f"✅ Converted {webp_path} to {png_path}")
+                        return png_path  # Return PNG path
+                    else:
+                        print("❌ No image found in response.")
+                        return None
+                else:
+                    print("⏳ Image is still being processed... Waiting 5 seconds.")
+                    sleep(5)  # Wait 5 seconds before checking again
+
+        else:
+            print(f"❌ Error: {response.status_code} - {response.text}")
+            return None
+    except Exception as e:
+        print(f"❌ Error generating image with Stable Horde: {e}")
         return None
 
+
+    
 def generate_pptx(request, ppt_content: List[Dict[str, List[str]]]) -> str:
     try:
         prs = Presentation()
@@ -128,8 +186,8 @@ def generate_pptx(request, ppt_content: List[Dict[str, List[str]]]) -> str:
             text_frame.margin_bottom = Inches(0.2)
 
             # Adjust font size dynamically if needed
-            max_font_size = Pt(24)
-            min_font_size = Pt(14)
+            max_font_size = Pt(20)
+            min_font_size = Pt(10)
             font_size = max_font_size
 
             # Add text bullets

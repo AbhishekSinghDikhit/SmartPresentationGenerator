@@ -23,7 +23,8 @@ const PresentationForm = () => {
 
     try {
       const response = await axios.post(
-        "https://smartpresentationgenerator-production.up.railway.app/api/generate_presentation",
+        // "https://smartpresentationgenerator-production.up.railway.app/api/generate_presentation",
+        "http://127.0.0.1:8080/api/generate_presentation",
         requestData,
         { responseType: "blob" }
       );
