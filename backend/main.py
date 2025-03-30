@@ -21,7 +21,7 @@ app = FastAPI(title="Presentation Generator API")
 # Enable CORS with safer configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["https://smart-presentation-generator.vercel.app"],
     allow_credentials=True,
     allow_methods=["POST"],  
     allow_headers=["Content-Type"],

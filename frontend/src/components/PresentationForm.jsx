@@ -30,7 +30,7 @@ const PresentationForm = () => {
 
     try {
       const response = await axios.post(
-        "http://127.0.0.1:8080/api/generate_presentation",
+        "https://smartpresentationgenerator-production.up.railway.app/api/generate_presentation",
         requestData,
         { responseType: "blob" }
       );
@@ -41,7 +41,7 @@ const PresentationForm = () => {
 
       // Fetch slide previews (Assuming API provides slide preview URLs)
       const previewResponse = await axios.post(
-        "http://127.0.0.1:8080/api/preview_slides",
+        "https://smartpresentationgenerator-production.up.railway.app/api/preview_slides",
         requestData
       );
       setPreviewImages(previewResponse.data.slide_previews);
