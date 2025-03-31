@@ -9,7 +9,7 @@ const PresentationForm = () => {
   const [description, setDescription] = useState("");
   const [useAI, setUseAI] = useState(true);
   const [imageStyle, setImageStyle] = useState("realistic");
-  const [templateName, setTemplateName] = useState("McKinsey Consulting Report Slides"); // Default template
+  const [templateName, setTemplateName] = useState("McKinsey_Consulting_Report_Slides");
   const [loading, setLoading] = useState(false);
   const [previewImages, setPreviewImages] = useState([]);
   const [pptBlob, setPptBlob] = useState(null);

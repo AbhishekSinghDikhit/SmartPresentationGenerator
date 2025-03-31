@@ -66,37 +66,46 @@ def generate_pptx(request, ppt_content: List[Dict[str, List[str]]], image_style:
         template_path = get_template_path(template_name or request.template)
         prs = Presentation(template_path)
 
-        # Title Slide (First slide in template)
-        slide = prs.slides[0]  # Assuming first slide is a title slide
-        slide.shapes.title.text = request.title.strip()
+        # Ensure template has at least 2 slides (Title + Thank You)
+        if len(prs.slides) < 2:
+            raise ValueError("Template must have at least a Title slide and a Thank You slide.")
 
-        for shape in slide.shapes:
+        # Title Slide (First slide from template)
+        title_slide = prs.slides[0]  
+        if title_slide.shapes.title:
+            title_slide.shapes.title.text = request.title.strip()
+
+        for shape in title_slide.shapes:
             if shape.has_text_frame and "By" in shape.text:
                 shape.text_frame.text = f"By {request.author.strip()}"
                 break
 
-        # Content Slides
+        # Content Slides (Ensuring the number of slides does not exceed the template's layout count)
         available_slides = min(len(ppt_content), request.num_slides)
         left_side = True  # Toggle image placement
+
         for i, slide_data in enumerate(ppt_content[:available_slides]):
-            slide = prs.slides.add_slide(prs.slide_layouts[1])  # Use content layout
+            slide_layout = prs.slide_layouts[1] if len(prs.slide_layouts) > 1 else prs.slide_layouts[0]  # Use a content layout
+            slide = prs.slides.add_slide(slide_layout)  
 
-            slide_title = slide.shapes.title
-            slide_title.text = slide_data["title"].strip()
-            slide_title.text_frame.paragraphs[0].font.size = Pt(36)
-            slide_title.text_frame.paragraphs[0].font.bold = True
-            slide_title.text_frame.paragraphs[0].font.color.rgb = RGBColor(0, 51, 102)
+            # Set Slide Title
+            if slide.shapes.title:
+                slide.shapes.title.text = slide_data["title"].strip()
+                slide.shapes.title.text_frame.paragraphs[0].font.size = Pt(36)
+                slide.shapes.title.text_frame.paragraphs[0].font.bold = True
+                slide.shapes.title.text_frame.paragraphs[0].font.color.rgb = RGBColor(0, 51, 102)
 
-            # Generate image using selected style
+            # Generate Image
             image_path = generate_slide_image(slide_data["title"], image_style)
+            img_width, img_height = Inches(5), Inches(4)
+
             if image_path:
-                img_width, img_height = Inches(5), Inches(4)
                 img_left = Inches(0.5) if left_side else Inches(7.5)
                 text_left = Inches(7.5) if left_side else Inches(0.5)
                 left_side = not left_side  # Toggle for next slide
 
                 slide.shapes.add_picture(image_path, img_left, Inches(1.5), width=img_width, height=img_height)
-                text_width = Inches(5.5)  # Adjust width if image present
+                text_width = Inches(5.5)
             else:
                 text_left = Inches(1)
                 text_width = Inches(10)
@@ -108,7 +117,7 @@ def generate_pptx(request, ppt_content: List[Dict[str, List[str]]], image_style:
             text_frame.word_wrap = True
             text_frame.margin_bottom = Inches(0.2)
 
-            # Add text bullets
+            # Add Text Bullets
             font_size = Pt(20)
             for bullet in slide_data["content"]:
                 p = text_frame.add_paragraph()
@@ -120,16 +129,16 @@ def generate_pptx(request, ppt_content: List[Dict[str, List[str]]], image_style:
             # Adjust font size if text overflows
             adjust_font_size(text_frame)
 
-        # Thank You Slide
-        thank_you_slide = prs.slides.add_slide(prs.slide_layouts[5])
-        thank_you_title = thank_you_slide.shapes.title
-        thank_you_title.text = "Thank You!"
-        thank_you_title.text_frame.paragraphs[0].font.size = Pt(44)
-        thank_you_title.text_frame.paragraphs[0].font.bold = True
-        thank_you_title.text_frame.paragraphs[0].font.color.rgb = RGBColor(255, 255, 255)
-        thank_you_title.text_frame.paragraphs[0].alignment = PP_ALIGN.CENTER
+        # Thank You Slide (Use last slide from template instead of adding a new one)
+        thank_you_slide = prs.slides[-1]  # Assuming the last slide is "Thank You"
+        if thank_you_slide.shapes.title:
+            thank_you_slide.shapes.title.text = "Thank You!"
+            thank_you_slide.shapes.title.text_frame.paragraphs[0].font.size = Pt(44)
+            thank_you_slide.shapes.title.text_frame.paragraphs[0].font.bold = True
+            thank_you_slide.shapes.title.text_frame.paragraphs[0].font.color.rgb = RGBColor(255, 255, 255)
+            thank_you_slide.shapes.title.text_frame.paragraphs[0].alignment = PP_ALIGN.CENTER
 
-        # Save presentation
+        # Save Presentation
         file_name = f"{sanitize_filename(request.title.strip())}.pptx"
         file_path = os.path.join(os.getcwd(), file_name)
         prs.save(file_path)
