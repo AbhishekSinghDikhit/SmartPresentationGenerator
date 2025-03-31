@@ -60,10 +60,10 @@ def adjust_font_size(text_frame, max_lines=8, max_font_size=Pt(20), min_font_siz
         for paragraph in text_frame.paragraphs:
             paragraph.font.size = max_font_size
 
-def generate_pptx(request, ppt_content: List[Dict[str, List[str]]], image_style: str = "realistic") -> str:
+def generate_pptx(request, ppt_content: List[Dict[str, List[str]]], image_style: str = "realistic", template_name: str = None) -> str:
     try:
         # Load selected template
-        template_path = get_template_path(request.template)
+        template_path = get_template_path(template_name or request.template)
         prs = Presentation(template_path)
 
         # Title Slide (First slide in template)
