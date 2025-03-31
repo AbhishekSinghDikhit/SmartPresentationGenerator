@@ -2,6 +2,9 @@ from pptx import Presentation
 from pptx.util import Inches, Pt
 from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN
+from pptx.enum.chart import XL_CHART_TYPE
+from pptx.chart.data import CategoryChartData
+from pptx.enum.shapes import MSO_SHAPE
 import os
 from typing import List, Dict
 from dotenv import load_dotenv
@@ -59,6 +62,35 @@ def adjust_font_size(text_frame, max_lines=8, max_font_size=Pt(20), min_font_siz
         max_font_size -= Pt(2)
         for paragraph in text_frame.paragraphs:
             paragraph.font.size = max_font_size
+
+def add_chart_to_slide(slide, chart_data: Dict[str, List[float]], chart_type: str = "bar") -> None:
+    """
+    Adds a chart (bar, pie, etc.) to the slide based on the provided data.
+    """
+    chart_data_obj = CategoryChartData()
+    chart_data_obj.categories = chart_data["categories"]
+    chart_data_obj.add_series('Series 1', chart_data["values"])
+
+    x, y, cx, cy = Inches(0.5), Inches(1.5), Inches(5), Inches(3)  # Position and size of the chart
+    chart = slide.shapes.add_chart(
+        XL_CHART_TYPE.BAR_CLUSTERED, x, y, cx, cy, chart_data_obj
+    ).chart
+
+    chart.has_legend = True
+    chart.plots[0].has_data_labels = True
+
+def add_shape_to_slide(slide, shape_type: str, left: Inches, top: Inches, width: Inches, height: Inches) -> None:
+    """
+    Adds a shape (rectangle, oval, etc.) to the slide.
+    """
+    if shape_type == "rectangle":
+        slide.shapes.add_shape(
+            MSO_SHAPE.RECTANGLE, left, top, width, height
+        )
+    elif shape_type == "circle":
+        slide.shapes.add_shape(
+            MSO_SHAPE.ELLIPSE, left, top, width, height
+        )
 
 def generate_pptx(request, ppt_content: List[Dict[str, List[str]]], image_style: str = "realistic", template_name: str = None) -> str:
     try:
@@ -129,14 +161,27 @@ def generate_pptx(request, ppt_content: List[Dict[str, List[str]]], image_style:
             # Adjust font size if text overflows
             adjust_font_size(text_frame)
 
-        # Thank You Slide (Use last slide from template instead of adding a new one)
+            # Add chart if specified in slide_data
+            if "chart" in slide_data:
+                add_chart_to_slide(slide, slide_data["chart"])
+
+            # Add shapes if specified in slide_data
+            if "shapes" in slide_data:
+                for shape in slide_data["shapes"]:
+                    add_shape_to_slide(slide, shape["type"], Inches(shape["left"]), Inches(shape["top"]), Inches(shape["width"]), Inches(shape["height"]))
+
+        # Remove the last slide ("Thank You") and add it at the end
         thank_you_slide = prs.slides[-1]  # Assuming the last slide is "Thank You"
-        if thank_you_slide.shapes.title:
-            thank_you_slide.shapes.title.text = "Thank You!"
-            thank_you_slide.shapes.title.text_frame.paragraphs[0].font.size = Pt(44)
-            thank_you_slide.shapes.title.text_frame.paragraphs[0].font.bold = True
-            thank_you_slide.shapes.title.text_frame.paragraphs[0].font.color.rgb = RGBColor(255, 255, 255)
-            thank_you_slide.shapes.title.text_frame.paragraphs[0].alignment = PP_ALIGN.CENTER
+        prs.slides._sldIdLst.remove(prs.slides._sldIdLst[-1])  # Remove "Thank You" slide
+
+        # Add "Thank You" slide at the end
+        thank_you_layout = prs.slide_layouts[5]  # Title slide layout for "Thank You"
+        slide = prs.slides.add_slide(thank_you_layout)
+        slide.shapes.title.text = "Thank You!"
+        slide.shapes.title.text_frame.paragraphs[0].font.size = Pt(44)
+        slide.shapes.title.text_frame.paragraphs[0].font.bold = True
+        slide.shapes.title.text_frame.paragraphs[0].font.color.rgb = RGBColor(255, 255, 255)
+        slide.shapes.title.text_frame.paragraphs[0].alignment = PP_ALIGN.CENTER
 
         # Save Presentation
         file_name = f"{sanitize_filename(request.title.strip())}.pptx"
