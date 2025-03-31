@@ -39,8 +39,9 @@ class PresentationRequest(BaseModel):
     title: str
     author: str
     num_slides: int
+    template_name: str 
     description: Optional[str] = None
-    image_style: Optional[str] = "realistic"  # New parameter with a default style
+    image_style: Optional[str] = "realistic"  
 
 # Function to generate structured PowerPoint content
 def get_ppt_content(title: str, num_slides: int, description: Optional[str] = None) -> list:
@@ -135,8 +136,8 @@ async def generate_presentation(request: PresentationRequest):
         if not ppt_content or all(slide.get("title") == "Error" for slide in ppt_content):
             raise HTTPException(status_code=500, detail="Failed to generate presentation content")
 
-        # Generate PPTX with selected image style
-        pptx_path = generate_pptx(request, ppt_content, request.image_style)  # Updated to pass `image_style`
+        # Generate PPTX 
+        pptx_path = generate_pptx(request, ppt_content, request.image_style, request.template_name)
         
         if not os.path.exists(pptx_path):
             raise HTTPException(status_code=500, detail="Failed to create presentation file")

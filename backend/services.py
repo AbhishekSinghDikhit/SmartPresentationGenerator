@@ -11,13 +11,21 @@ import re
 
 load_dotenv()
 
-# Ensure a valid directory exists for images
+TEMPLATE_DIR = "templates"
 IMAGE_DIR = "slide_images"
 os.makedirs(IMAGE_DIR, exist_ok=True)
 
 def sanitize_filename(filename: str) -> str:
     """Removes invalid characters from filenames."""
     return re.sub(r'[<>:"/\\|?*]', '_', filename)
+
+def get_template_path(template_name: str) -> str:
+    """Returns the full path of the selected template."""
+    template_path = os.path.join(TEMPLATE_DIR, f"{template_name}.pptx")
+    if os.path.exists(template_path):
+        return template_path
+    else:
+        raise FileNotFoundError(f"❌ Template '{template_name}' not found!")
 
 def generate_slide_image(prompt: str, style: str) -> str:
     """
@@ -54,43 +62,24 @@ def adjust_font_size(text_frame, max_lines=8, max_font_size=Pt(20), min_font_siz
 
 def generate_pptx(request, ppt_content: List[Dict[str, List[str]]], image_style: str = "realistic") -> str:
     try:
-        prs = Presentation()
-        prs.slide_width = Inches(13.33)
-        prs.slide_height = Inches(7.5)
+        # Load selected template
+        template_path = get_template_path(request.template)
+        prs = Presentation(template_path)
 
-        title_bg_color = RGBColor(0, 51, 102)
-        content_bg_color = RGBColor(220, 230, 241)
-        text_color = RGBColor(255, 255, 255)
-        bullet_color = RGBColor(0, 0, 0)
+        # Title Slide (First slide in template)
+        slide = prs.slides[0]  # Assuming first slide is a title slide
+        slide.shapes.title.text = request.title.strip()
 
-        # Title Slide
-        title_slide_layout = prs.slide_layouts[5]
-        slide = prs.slides.add_slide(title_slide_layout)
-        title_shape = slide.shapes.title
-        slide.background.fill.solid()
-        slide.background.fill.fore_color.rgb = title_bg_color
-
-        title_shape.text = request.title.strip()
-        title_frame = title_shape.text_frame
-        title_frame.paragraphs[0].font.size = Pt(44)
-        title_frame.paragraphs[0].font.bold = True
-        title_frame.paragraphs[0].font.color.rgb = text_color
-
-        # Author Subtitle
-        author_shape = slide.shapes.add_textbox(Inches(3), Inches(3), Inches(5), Inches(1))
-        author_frame = author_shape.text_frame
-        author_frame.text = f"By {request.author.strip()}"
-        author_frame.paragraphs[0].font.size = Pt(28)
-        author_frame.paragraphs[0].font.color.rgb = text_color
+        for shape in slide.shapes:
+            if shape.has_text_frame and "By" in shape.text:
+                shape.text_frame.text = f"By {request.author.strip()}"
+                break
 
         # Content Slides
         available_slides = min(len(ppt_content), request.num_slides)
         left_side = True  # Toggle image placement
-        for slide_data in ppt_content[:available_slides]:
-            slide_layout = prs.slide_layouts[5]
-            slide = prs.slides.add_slide(slide_layout)
-            slide.background.fill.solid()
-            slide.background.fill.fore_color.rgb = content_bg_color
+        for i, slide_data in enumerate(ppt_content[:available_slides]):
+            slide = prs.slides.add_slide(prs.slide_layouts[1])  # Use content layout
 
             slide_title = slide.shapes.title
             slide_title.text = slide_data["title"].strip()
@@ -125,7 +114,7 @@ def generate_pptx(request, ppt_content: List[Dict[str, List[str]]], image_style:
                 p = text_frame.add_paragraph()
                 p.text = bullet.strip()
                 p.font.size = font_size
-                p.font.color.rgb = bullet_color
+                p.font.color.rgb = RGBColor(0, 0, 0)
                 p.level = 0
 
             # Adjust font size if text overflows
@@ -133,13 +122,11 @@ def generate_pptx(request, ppt_content: List[Dict[str, List[str]]], image_style:
 
         # Thank You Slide
         thank_you_slide = prs.slides.add_slide(prs.slide_layouts[5])
-        thank_you_slide.background.fill.solid()
-        thank_you_slide.background.fill.fore_color.rgb = title_bg_color
         thank_you_title = thank_you_slide.shapes.title
         thank_you_title.text = "Thank You!"
         thank_you_title.text_frame.paragraphs[0].font.size = Pt(44)
         thank_you_title.text_frame.paragraphs[0].font.bold = True
-        thank_you_title.text_frame.paragraphs[0].font.color.rgb = text_color
+        thank_you_title.text_frame.paragraphs[0].font.color.rgb = RGBColor(255, 255, 255)
         thank_you_title.text_frame.paragraphs[0].alignment = PP_ALIGN.CENTER
 
         # Save presentation
@@ -149,6 +136,6 @@ def generate_pptx(request, ppt_content: List[Dict[str, List[str]]], image_style:
         return file_path
 
     except PermissionError:
-        raise OSError(f"Permission denied when saving file to {file_path}")
+        raise OSError(f"❌ Permission denied when saving file to {file_path}")
     except Exception as e:
-        raise Exception(f"Failed to generate presentation: {str(e)}")
+        raise Exception(f"❌ Failed to generate presentation: {str(e)}")

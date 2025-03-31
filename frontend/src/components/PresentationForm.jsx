@@ -8,7 +8,8 @@ const PresentationForm = () => {
   const [numSlides, setNumSlides] = useState(5);
   const [description, setDescription] = useState("");
   const [useAI, setUseAI] = useState(true);
-  const [imageStyle, setImageStyle] = useState("realistic"); // Default style
+  const [imageStyle, setImageStyle] = useState("realistic");
+  const [templateName, setTemplateName] = useState("McKinsey Consulting Report Slides"); // Default template
   const [loading, setLoading] = useState(false);
   const [previewImages, setPreviewImages] = useState([]);
   const [pptBlob, setPptBlob] = useState(null);
@@ -25,7 +26,8 @@ const PresentationForm = () => {
       num_slides: Number(numSlides),
       description: useAI ? "" : description.trim(),
       useAI: useAI,
-      image_style: imageStyle, // Include image style in the request
+      image_style: imageStyle,
+      template_name: templateName, // Include selected template
     };
 
     try {
@@ -35,11 +37,10 @@ const PresentationForm = () => {
         { responseType: "blob" }
       );
 
-      // Convert the response blob into a URL
       const blobUrl = window.URL.createObjectURL(new Blob([response.data]));
       setPptBlob(blobUrl);
 
-      // Fetch slide previews (Assuming API provides slide preview URLs)
+      // Fetch slide previews (if API supports it)
       const previewResponse = await axios.post(
         "https://smartpresentationgenerator-production.up.railway.app/api/preview_slides",
         requestData
@@ -85,7 +86,7 @@ const PresentationForm = () => {
             required
           />
 
-          {/* Radio buttons */}
+          {/* Radio buttons for AI or Manual Input */}
           <div className="flex justify-between items-center bg-gray-100 p-3 rounded-lg">
             <label className="flex items-center space-x-2">
               <input
@@ -129,6 +130,21 @@ const PresentationForm = () => {
               <option value="realistic">Realistic</option>
               <option value="anime">Anime</option>
               <option value="ghibli">Ghibli Studio</option>
+              <option value="cyberpunk">CyberPunk</option>
+              <option value="minimalist">Minimalist</option>
+            </select>
+          </div>
+
+          {/* Dropdown for Template Selection */}
+          <div className="flex flex-col">
+            <label className="text-gray-700 mb-1 font-semibold">Select Presentation Template:</label>
+            <select
+              value={templateName}
+              onChange={(e) => setTemplateName(e.target.value)}
+              className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+            >
+              <option value="McKinsey Consulting Report Slides">McKinsey Consulting Report</option>
+              <option value="Cute Blackboard Student Council Presentation">Cute Blackboard</option>
             </select>
           </div>
 

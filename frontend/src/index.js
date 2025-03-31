@@ -18,7 +18,7 @@ export default {
 
             // Cloudflare AI Model Call
             const ai = env.AI;
-            const model = "@cf/black-forest-labs/flux-1-schnell";  // Use appropriate model
+            const model = "@cf/black-forest-labs/flux-1-schnell";  
             const inputs = { prompt: modifiedPrompt };
 
             const response = await ai.run(model, inputs);
