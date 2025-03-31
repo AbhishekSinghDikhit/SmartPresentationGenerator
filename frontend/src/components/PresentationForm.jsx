@@ -143,8 +143,10 @@ const PresentationForm = () => {
               onChange={(e) => setTemplateName(e.target.value)}
               className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
             >
-              <option value="McKinsey Consulting Report Slides">McKinsey Consulting Report</option>
-              <option value="Cute Blackboard Student Council Presentation">Cute Blackboard</option>
+              <option value="corporate_professional">Corporate Professional</option>
+              <option value="modern_minimalist">Minimalist</option>
+              <option value="McKinsey_Consulting_Report_Slides">McKinsey Consulting Report</option>
+              <option value="Cute_Blackboard_Student_Council_Presentation">Cute Blackboard</option>
             </select>
           </div>
 
